@@ -1,0 +1,406 @@
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+import com.opencsv.CSVReader;
+import com.opencsv.CSVWriter;
+
+import java.awt .*;
+import java.awt.event .*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+public class UserInterfaceCSV_SaveDialog {
+
+	private static String labelHeader = "Question";
+	private static String labelQuestion = "";
+	private static String SavePath;
+	private static Icon logoImage;
+	private static boolean filesSelected = false;
+	private static JButton butSCluster = new JButton("Show Cluster");
+	private static JButton butSAnswer = new JButton("Show Answers");
+	private static JButton butSSave = new JButton("Save as CSV File");
+	
+	private static JPanel inner = new JPanel();
+	private static JScrollPane scrollPane = new JScrollPane(inner);
+	private static JPanel helpPanel = new JPanel();
+	private static JPanel contentPanel = new JPanel();
+	
+	//Excel:
+	private static int position;
+	private static String ClusterFilePath;
+	private static String AnswerFilePath;
+
+	private static String[] arrayStringAnswers;
+	private static String[] arrayStringClusters;
+	private static String[][] testStringArray;
+//	private static JList listbox;
+	private static JList<String> listbox; 
+	
+	public static void main(String[] args ) {	
+		getFileDialogs();
+	}	
+		
+		
+		
+	protected static void startProgram() {	
+		JFrame frame = new JFrame("Teamproject Clustering");
+		frame.getContentPane();
+		frame.setLayout(new BorderLayout());
+		
+		logoImage = new ImageIcon("C:\\Users\\Oliver\\Desktop\\Team Project 2016\\GUI\\header.jpg");
+		JLabel lblIcon = new JLabel(logoImage);
+		frame.add(lblIcon, BorderLayout.NORTH);
+//		frame.add(getPaneFirst() , BorderLayout.CENTER);
+		scrollPane.setViewportView(getPaneContentPanel());
+		frame.add(scrollPane, BorderLayout.CENTER);
+		frame.addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				System.exit(0);
+			}});
+		
+		frame.setSize(830, 650); //1000, 750
+//		frame.pack();
+		frame.setVisible(true );
+		
+		butSCluster.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					createClusterArray();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
+				getPaneAfterButtonContentPanel("Cluster");	
+							
+				frame.setTitle(labelQuestion);
+				frame.repaint();
+				frame.setVisible(true);				
+			}
+		});
+		butSAnswer.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					createAnswerArray();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
+				getPaneAfterButtonContentPanel("Answer");
+					
+				frame.setTitle(labelQuestion);
+				frame.repaint();
+				frame.setVisible(true);
+			}
+		});
+		butSAnswer.doClick();
+		butSSave.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					saveFileOption();
+					writeFile();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+//				
+//				getPaneAfterButtonContentPanel("Answer");
+//					
+//				frame.setTitle(labelQuestion);
+//				frame.repaint();
+//				frame.setVisible(true);
+			}
+		});
+	}
+	
+	protected static void getFileDialogs() {
+		JFrame selectFilesFrame = new JFrame("TeamProject Clustering");
+		selectFilesFrame.getContentPane();
+		selectFilesFrame.setLayout( new GridLayout(0,1));
+		
+		JPanel one = new JPanel();
+		JPanel two = new JPanel();
+		one.setLayout(new FlowLayout());
+		two.setLayout(new FlowLayout());
+		JFrame fileDialogFrame = new JFrame();
+		FileDialog fileDialogAnswer = new FileDialog(fileDialogFrame,"Select Answer File");
+		FileDialog fileDialogCluster = new FileDialog(fileDialogFrame,"Select Cluster File");
+		JButton butFileDialogAnswer = new JButton("Open File");
+		JButton butFileDialogCluster = new JButton("Open File");
+		JLabel labelFileDialogAnswer = new JLabel();
+		JLabel labelFileDialogCluster = new JLabel();
+		one.add(new JLabel("Select Answer Excel File: "));
+		one.add(butFileDialogAnswer);
+		one.add(labelFileDialogAnswer);
+		two.add(new JLabel("Select Cluster Excel File: "));
+		two.add(butFileDialogCluster);
+		two.add(labelFileDialogCluster);
+		butFileDialogAnswer.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				fileDialogAnswer.setVisible(true);
+			AnswerFilePath = fileDialogAnswer.getDirectory() + fileDialogAnswer.getFile();
+			}
+		});
+		butFileDialogCluster.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				fileDialogCluster.setVisible(true);
+				ClusterFilePath = fileDialogCluster.getDirectory() + fileDialogCluster.getFile();
+			}
+		});
+		selectFilesFrame.add(one);
+		selectFilesFrame.add(two);
+				
+		JButton butGo = new JButton("Go");
+		selectFilesFrame.add(butGo);
+
+		butGo.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				System.out.println(filesSelected);
+				System.out.println("Answer: " + fileDialogAnswer.getDirectory());
+				System.out.println("Cluster: " + fileDialogCluster.getDirectory());
+				
+				if (fileDialogAnswer.getDirectory() != null && fileDialogCluster.getDirectory() != null) {
+					filesSelected = true;
+					selectFilesFrame.dispose();
+					startProgram();
+				}
+				else if (fileDialogAnswer.getDirectory() != null && fileDialogCluster.getDirectory() == null) {
+					JOptionPane.showMessageDialog(null, "You have to select a Cluster file!");
+					filesSelected = false;
+				}
+				else if (fileDialogAnswer.getDirectory() == null && fileDialogCluster.getDirectory() != null) {
+					JOptionPane.showMessageDialog(null, "You have to select a Answer file!");
+					filesSelected = false;
+				}
+				else {
+					JOptionPane.showMessageDialog(null, "You have to select an Answer and a Cluster file!");
+					filesSelected = false;
+				};
+			}
+		});
+		selectFilesFrame.setSize(400, 150);
+		selectFilesFrame.setVisible(true);
+	}
+	
+	protected static JComponent getPaneContentPanel() {
+		inner.setLayout(new BorderLayout());
+		inner.setBorder( new EmptyBorder( 3, 3, 3, 3 ));
+		JLabel JlabelHeader = new JLabel(labelHeader);
+		JLabel JlabelQuestion = new JLabel(labelQuestion);
+		
+			JPanel innerNorth = new JPanel();
+			innerNorth.setLayout(new GridLayout(0,1));
+			innerNorth.add(JlabelHeader);
+			innerNorth.add(JlabelQuestion);
+			
+		inner.add(innerNorth, BorderLayout.NORTH);
+		inner.add(getHelpPanel(), BorderLayout.SOUTH);
+
+	return inner;
+	}
+	
+	protected static JComponent getHelpPanel() {
+		helpPanel.removeAll();
+		helpPanel.setLayout(new GridLayout(0,2, 2, 0));
+		helpPanel.add(butSAnswer);
+		helpPanel.add(butSCluster);	
+		helpPanel.add(new JLabel(""));
+		return helpPanel;
+	}
+	
+	protected static JComponent getPaneAfterButtonContentPanel(String SButton) {
+		inner.removeAll();
+		inner.setLayout(new BorderLayout());
+		inner.add(new JLabel(""));
+		inner.add((new JLabel(labelHeader + ": " + labelQuestion)), BorderLayout.NORTH);
+		if (SButton == "Cluster") {
+			inner.add(getButtonCluster(), BorderLayout.CENTER);
+		}
+		else if (SButton == "Answer") {
+			inner.add(getButtonAnswer(), BorderLayout.CENTER);
+		}
+		else {
+			System.out.println("Error");
+		}
+		inner.add(getHelpPanel(), BorderLayout.SOUTH);
+	return inner;
+	}
+	
+	protected static JComponent getButtonCluster() {
+		contentPanel.removeAll();
+		contentPanel.setLayout(new GridLayout(0,2, 5, 5));
+		contentPanel.setBorder(new EmptyBorder(10,0,0,0));
+
+		for (int i=0; i < testStringArray.length; i++) {
+			DefaultListModel<String> model = new DefaultListModel<String>();
+			for (int j=0; j < testStringArray[i].length; j++) {
+				model.addElement(testStringArray[i][j]);
+				if((testStringArray[i].length -1)== j) {
+				listbox = new JList<String>(model);
+				contentPanel.add(listbox);
+				
+				listbox.addMouseListener(new MouseAdapter() {
+						 public void mouseClicked(MouseEvent e) {
+							 if (e.getClickCount() == 2) {
+				                int index = listbox.locationToIndex(e.getPoint());
+				                System.out.println("Double clicked on Item " + index);
+						            
+						        //Custom button text
+						        Object[] options = {"Add", "Edit", "Delete"};
+						        int n = JOptionPane.showOptionDialog(null, "Would you like to add, change or delete?", "", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null,options,options[2]);
+						        if (n == 0) {
+						        	String tmpAddValue = (String)JOptionPane.showInputDialog(null, "Add Value?", "Add Value?", JOptionPane.QUESTION_MESSAGE, null, null, null);
+							        model.addElement(tmpAddValue);
+						        }
+						        else if (n == 1) {
+						        	String tmpValue = (String)JOptionPane.showInputDialog(null, "New Value?", "New Value?", JOptionPane.QUESTION_MESSAGE, null, null, listbox.getSelectedValue());
+							        model.setElementAt(tmpValue, index);
+						        }
+						        else if (n == 2) {
+						            model.removeElementAt(index);
+						        }
+						        else {
+						            System.out.println("No Button pushed");
+						        }
+						       
+				           }      
+				      }
+				});
+				listbox.addListSelectionListener(new ListSelectionListener() {
+					public void valueChanged(ListSelectionEvent arg0) {
+						listbox.clearSelection();
+					}
+				});
+			}
+			}
+		}
+		
+		return contentPanel;
+	}
+	protected static JComponent getButtonAnswer() {
+		contentPanel.removeAll();
+		contentPanel.setLayout(new GridLayout(0,2));
+		for (int i=1; i < arrayStringAnswers.length; i++) {
+			contentPanel.add(new JLabel( i + ". " + arrayStringAnswers[i]));
+			contentPanel.add(new JLabel(""));
+		}
+		return contentPanel;
+	}
+	
+	
+	
+	
+	//Excel:
+	protected static void createClusterArray() throws IOException  {
+		try {
+			CSVReader readerCluster = new CSVReader(new FileReader(ClusterFilePath), '|');
+   		List<String[]> allClusterRows;
+			allClusterRows = readerCluster.readAll();
+			arrayStringClusters = new String[allClusterRows.size()];
+			int i=0;
+			for(String[] row : allClusterRows) {
+				arrayStringClusters[i] = Arrays.toString(row);
+				i++;
+			}	
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			int[] arrayClusterNo = new int[arrayStringClusters.length -1];
+			String tmpString;
+			for (int i=1, j=0; i < arrayStringClusters.length; i++, j++) {
+				tmpString = arrayStringClusters[i];
+				position = tmpString.indexOf(",");
+				//substring cluster number
+				arrayClusterNo[j] = Integer.parseInt(tmpString.substring(position + 10, tmpString.length() -1));
+			}
+			int largestClusterNo = 0;
+			for (int i=0; i < arrayClusterNo.length; i++){
+				if(arrayClusterNo[i] > largestClusterNo) {
+					largestClusterNo = arrayClusterNo[i];
+				}		
+			}
+			int arrayCount[] = new int[largestClusterNo+1];
+			int countRows;
+			createAnswerArray();
+			testStringArray = new String[largestClusterNo+1][];
+			for (int i=0; i <= largestClusterNo; i++) {
+				countRows = 0;
+				for (int j=0; j < arrayClusterNo.length; j++) {
+					if (arrayClusterNo[j] == i) {
+						countRows++;
+					}
+				}
+				arrayCount[i] = countRows;
+				testStringArray[i] = new String[countRows];
+				countRows = 0;
+				for (int k=0; k < arrayClusterNo.length; k++) {
+					if(arrayClusterNo[k] == i) {
+						testStringArray[i][countRows] = arrayStringAnswers[k+1];
+						countRows++;
+					}
+				}
+			}
+			labelQuestion = arrayStringAnswers[0];
+	}
+	protected static void createAnswerArray() throws IOException  {
+		String[] arrayStringTempAnswers;
+		try {
+		CSVReader readerAnswer = new CSVReader(new FileReader(AnswerFilePath), ';');
+		List<String[]> allAnswerRows;
+		allAnswerRows = readerAnswer.readAll();		
+		arrayStringTempAnswers = new String[allAnswerRows.size()];
+		int i=0;
+		for(String[] row : allAnswerRows) {
+			arrayStringTempAnswers[i] = Arrays.toString(row);
+			i++;
+		}		
+		String tmpString;
+		int position;
+		arrayStringAnswers = new String[arrayStringTempAnswers.length];
+		for (int j=0; j < arrayStringTempAnswers.length; j++) {
+			tmpString = arrayStringTempAnswers[j];
+			position = tmpString.indexOf(",");
+			tmpString = tmpString.substring(1, position);
+			arrayStringAnswers[j] = tmpString;
+		}	
+		} catch (IOException e) {
+			e.printStackTrace();
+		}	
+		labelQuestion = arrayStringAnswers[0];
+	}
+	
+	protected static void saveFileOption() throws IOException{
+	JFileChooser chooser = new JFileChooser("c:/");
+	  chooser.setMultiSelectionEnabled(false);
+	  FileFilter filter = new FileNameExtensionFilter("CSV File (*.csv)","csv");
+	  chooser.setFileFilter(filter);
+	  int result = chooser.showSaveDialog(null);
+	  System.out.println(result);
+	  SavePath = chooser.getSelectedFile().getPath();
+	  if (!SavePath.toLowerCase().endsWith(".csv")) {
+		  SavePath = SavePath + ".csv";
+	  }
+	  File SaveFile = new File(SavePath);
+	  
+	  System.out.println(chooser.getSelectedFile().toString());
+	  if (result == JFileChooser.APPROVE_OPTION)
+	  SaveFile = chooser.getSelectedFile();
+
+	  System.out.println(SaveFile.getAbsolutePath());
+	}
+	protected static void writeFile() throws IOException {
+	  CSVWriter writer = new CSVWriter(new FileWriter(SavePath), ';', CSVWriter.NO_QUOTE_CHARACTER, 
+			    CSVWriter.NO_ESCAPE_CHARACTER, 
+			    System.getProperty("line.separator"));
+	  	 for(int i=0; i < testStringArray.length; i++) {
+	  		 writer.writeNext(testStringArray[i]);		 
+	  	 }
+		 writer.close();  
+	}
+}
